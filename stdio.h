@@ -45,6 +45,12 @@ extern "C" {
 
 #include <stdio.h>
 
+#if defined(_WIN32)
+
+#define fileno  _fileno
+
+#endif
+
 #else
 
 #define NOCL_FEATURE_NO_STDIO

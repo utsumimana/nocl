@@ -51,7 +51,7 @@ extern "C" {
 
 #define va_copy(d,s)  ((d) = (s))
 
-#elif /* MinGW/MinGW-w64 GCC 3.0.0 */ defined(__MINGW32__) && defined(__GNUC__) && __GNUC__ >= 3
+#elif /* MinGW/MinGW-w64 GCC 3.2.0 */ defined(__MINGW32__)
 
 #define va_copy(d,s)  __builtin_va_copy(d,s)
 

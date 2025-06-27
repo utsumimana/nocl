@@ -40,31 +40,39 @@ extern "C" {
 #endif
 
 #if defined(NOCL_HAS_THREADS_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__))
+    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__) && !defined(__MINGW32__))
 
 #include <threads.h>
 
 #elif /* Win32 */ defined(_WIN32) && \
 	/* MSVC 2.0 */ ((defined(_MSC_VER) && _MSC_VER >= 900) || \
-	defined(__MINGW32__))
+	/* MinGW/MinGW-w64 GCC 3.2.0 */ defined(__MINGW32__)
 
 #include "time.h"
 #include "stdlib.h"
+#include "noinline.h"
 
-#include <windef.h>
-#include <winbase.h>
-#include <processthreadsapi.h>
-#include <errhandlingapi.h>
-#include <synchapi.h>
-#include <handleapi.h>
+#if defined(NOCL_FEATURE_NO_TIME) || defined(NOCL_FEATURE_NO_STDLIB)
+
+#define NOCL_FEATURE_NO_THREADS
+
+#else
+
+#if !defined(WIN32_LEAN_AND_MEAN)
+
+#define WIN32_LEAN_AND_MEAN
+
+#endif
+
+#include <windows.h>
 
 typedef int (*thrd_start_t) (void *);
 typedef void (*tss_dtor_t)  (void *);
 
 enum {
-	mtx_plain	   = 0,
+	mtx_plain      = 0,
 	mtx_recursive  = 1,
-	mtx_timed	   = 2
+	mtx_timed      = 2
 };
 
 enum {
@@ -88,7 +96,7 @@ typedef HANDLE thrd_t;
 
 typedef CRITICAL_SECTION mtx_t;
 
-typedef struct __cnd_t {
+typedef struct cnd_t {
 	HANDLE mutex;
 	HANDLE signal_sema;
 	HANDLE broadcast_event;
@@ -146,40 +154,35 @@ __inline int __cdecl thrd_equal(thrd_t a, thrd_t b) {
 	return a == b;
 }
 
-#define __NOCL_INTERNAL_THREADS_IS_TIMESPEC32_VALID(ts) \
+#define __nocl_internal_threads_is_timespec32_valid(ts) \
   ((((struct __nocl_internal_time_timespec32 *) (ts))->tv_sec >= 0) && \
     (((struct __nocl_internal_time_timespec32 *) (ts))->tv_nsec >= 0) && \
       (((struct __nocl_internal_time_timespec32 *) (ts))->tv_nsec <= 999999999))
 
-#define __NOCL_INTERNAL_THREADS_IS_TIMESPEC64_VALID(ts) \
+#define __nocl_internal_threads_is_timespec64_valid(ts) \
   ((((struct __nocl_internal_time_timespec64 *) (ts))->tv_sec >= 0) && \
     (((struct __nocl_internal_time_timespec64 *) (ts))->tv_nsec >= 0) && \
       (((struct __nocl_internal_time_timespec64 *) (ts))->tv_nsec <= 999999999))
 
 /* Precondition: 'ts' validated. */
 __inline __int64 __cdecl __nocl_internal_time_timespec32_to_file_time(const struct __nocl_internal_time_timespec32 *ts) {
-	unsigned __int64 sec;
-	unsigned __int64 nsec;
 
-	sec = (unsigned __int64) ts->tv_sec * (unsigned __int64) 10000000;
+	unsigned __int64 sec = (unsigned __int64) ts->tv_sec * (unsigned __int64) 10000000;
 
 	/* Add another 100 ns if division yields remainder. */
-	nsec = (unsigned long) ts->tv_nsec / 100ul + !!((unsigned long) ts->tv_nsec % 100ul);
+	unsigned __int64 nsec = (unsigned long) ts->tv_nsec / 100ul + !!((unsigned long) ts->tv_nsec % 100ul);
 
 	return sec + nsec;
 }
 
 /* Precondition: 'ts' validated. */
 __inline __int64 __cdecl __nocl_internal_time_timespec64_to_file_time(const struct __nocl_internal_time_timespec64 *ts, size_t *periods) {
-	unsigned __int64 sec;
-	unsigned __int64 nsec;
-	unsigned __int64 retval;
 
 	*periods = (unsigned long) ((unsigned __int64) ts->tv_sec / (unsigned __int64) 922337203685);
-	sec = (unsigned __int64) ts->tv_sec % (unsigned __int64) 922337203685 * (unsigned __int64) 10000000;
+	unsigned __int64 sec = (unsigned __int64) ts->tv_sec % (unsigned __int64) 922337203685 * (unsigned __int64) 10000000;
 
 	/* Add another 100 ns if division yields remainder. */
-	nsec = (unsigned long) ts->tv_nsec / 100ul + !!((unsigned long) ts->tv_nsec % 100ul);
+	unsigned __int64 nsec = (unsigned long) ts->tv_nsec / 100ul + !!((unsigned long) ts->tv_nsec % 100ul);
 
 	/* 64-bit time_t may cause overflow. */
 	if (nsec > (unsigned __int64) - 1 - sec) {
@@ -188,7 +191,7 @@ __inline __int64 __cdecl __nocl_internal_time_timespec64_to_file_time(const stru
 		sec = 0;
 	}
 
-	retval = sec + nsec;
+	unsigned __int64 retval = sec + nsec;
 
 	if (*periods && !retval) {
 		-- *periods;
@@ -199,14 +202,15 @@ __inline __int64 __cdecl __nocl_internal_time_timespec64_to_file_time(const stru
 }
 
 __inline int __cdecl __nocl_internal_threads_thrd_sleep(__int64 file_time_in) {
-	DWORD error;
 
-	if (file_time_in < 0) return - ERROR_INTERNAL_ERROR;
+	if (file_time_in < 0) return -ERROR_INTERNAL_ERROR;
+
+	DWORD error;
 
 	HANDLE timer = CreateWaitableTimerA(NULL, 1, NULL);
 	if (!timer) {
 		error = GetLastError();
-		return error > 1 ? - (int) error : - ERROR_INTERNAL_ERROR;
+		return error > 1 ? - (int) error : -ERROR_INTERNAL_ERROR;
 	}
 
 	LARGE_INTEGER due_time;
@@ -214,13 +218,13 @@ __inline int __cdecl __nocl_internal_threads_thrd_sleep(__int64 file_time_in) {
 	if (!SetWaitableTimer(timer, &due_time, 0, NULL, NULL, 0)) {
 		error = GetLastError();
 		CloseHandle(timer);
-		return error > 1 ? - (int) error : - ERROR_INTERNAL_ERROR;
+		return error > 1 ? - (int) error : -ERROR_INTERNAL_ERROR;
 	}
 
 	if (WaitForSingleObject(timer, INFINITE) != WAIT_OBJECT_0) {
 		error = GetLastError();
 		CloseHandle(timer);
-		return error > 1 ? - (int) error : - ERROR_INTERNAL_ERROR;
+		return error > 1 ? - (int) error : -ERROR_INTERNAL_ERROR;
 	}
 
 	CloseHandle(timer);
@@ -230,15 +234,12 @@ __inline int __cdecl __nocl_internal_threads_thrd_sleep(__int64 file_time_in) {
 __inline int __cdecl __nocl_internal_threads_thrd_sleep32(const struct __nocl_internal_time_timespec32 *ts_in, struct __nocl_internal_time_timespec32 *rem_out) {
 	(void) rem_out;
 
-	__int64 file_time;
-	int retval;
+	if (!__nocl_internal_threads_is_timespec32_valid(ts_in)) return - ERROR_INVALID_PARAMETER;
 
-	if (!__NOCL_INTERNAL_THREADS_IS_TIMESPEC32_VALID(ts_in)) return - ERROR_INVALID_PARAMETER;
-
-	file_time = __nocl_internal_time_timespec32_to_file_time(ts_in);
+	__int64 file_time = __nocl_internal_time_timespec32_to_file_time(ts_in);
 	if (file_time < 0) return - ERROR_INVALID_PARAMETER;
 
-	retval = __nocl_internal_threads_thrd_sleep(file_time);
+	int retval = __nocl_internal_threads_thrd_sleep(file_time);
 
 	return retval;
 }
@@ -246,18 +247,15 @@ __inline int __cdecl __nocl_internal_threads_thrd_sleep32(const struct __nocl_in
 __inline int __cdecl __nocl_internal_threads_thrd_sleep64(const struct __nocl_internal_time_timespec64 *ts_in, struct __nocl_internal_time_timespec64 *rem_out) {
 	(void) rem_out;
 
-	__int64 file_time;
+	if (!__nocl_internal_threads_is_timespec64_valid(ts_in)) return - ERROR_INVALID_PARAMETER;
+
 	size_t periods;
-	int retval;
-
-	if (!__NOCL_INTERNAL_THREADS_IS_TIMESPEC64_VALID(ts_in)) return - ERROR_INVALID_PARAMETER;
-
-	file_time = __nocl_internal_time_timespec64_to_file_time(ts_in, &periods);
+	__int64 file_time = __nocl_internal_time_timespec64_to_file_time(ts_in, &periods);
 	if (file_time < 0) return - ERROR_INVALID_PARAMETER;
 
 restart_sleep:
 
-	retval = __nocl_internal_threads_thrd_sleep(file_time);
+	int retval = __nocl_internal_threads_thrd_sleep(file_time);
 
 	if (!retval && periods) {
 		-- periods;
@@ -313,12 +311,12 @@ __inline int __cdecl mtx_trylock(mtx_t *mtx) {
 }
 
 __inline int __cdecl __nocl_internal_threads_mtx_timedlock32(mtx_t *mtx, const struct __nocl_internal_time_timespec32 *ts) {
-	volatile int success;
+
+	if (!__nocl_internal_threads_is_timespec32_valid(ts)) return thrd_error;
+
 	struct __nocl_internal_time_timespec32 ts_current;
 
-	if (!__NOCL_INTERNAL_THREADS_IS_TIMESPEC32_VALID(ts)) return thrd_error;
-
-	success = TryEnterCriticalSection(mtx);
+	volatile int success = TryEnterCriticalSection(mtx);
 	while (!success) {
 		if (!__nocl_internal_time_timespec32_get(&ts_current, TIME_UTC)) return thrd_error;
 
@@ -336,12 +334,12 @@ __inline int __cdecl __nocl_internal_threads_mtx_timedlock32(mtx_t *mtx, const s
 }
 
 __inline int __cdecl __nocl_internal_threads_mtx_timedlock64(mtx_t *mtx, const struct __nocl_internal_time_timespec64 *ts) {
-	int success;
+
+	if (!__nocl_internal_threads_is_timespec64_valid(ts)) return thrd_error;
+
 	struct __nocl_internal_time_timespec64 ts_current;
 
-	if (!__NOCL_INTERNAL_THREADS_IS_TIMESPEC64_VALID(ts)) return thrd_error;
-
-	success = TryEnterCriticalSection(mtx);
+	int success = TryEnterCriticalSection(mtx);
 	while (!success) {
 		if (!__nocl_internal_time_timespec64_get(&ts_current, TIME_UTC)) return thrd_error;
 
@@ -388,7 +386,7 @@ __inline int __cdecl cnd_init(cnd_t *cond) {
 }
 
 __inline void __cdecl cnd_destroy(cnd_t *cond) {
-	if (cond->wait_count) return;
+	if (cond->wait_count) abort();
 	CloseHandle(cond->mutex);
 	CloseHandle(cond->signal_sema);
 	CloseHandle(cond->broadcast_event);
@@ -429,6 +427,7 @@ __inline int __cdecl cnd_broadcast(cnd_t *cond) {
 }
 
 __inline int _cdecl __nocl_internal_threads_cnd_wait(cnd_t *cond, mtx_t *mtx, DWORD wait_time, int clamped) {
+
 	DWORD wait_status = WaitForSingleObject(cond->mutex, INFINITE);
 	if (wait_status == WAIT_ABANDONED) abort();
 	else if (wait_status != WAIT_OBJECT_0) return thrd_error;
@@ -461,6 +460,7 @@ __inline int _cdecl __nocl_internal_threads_cnd_wait(cnd_t *cond, mtx_t *mtx, DW
 	}
 
 	EnterCriticalSection(mtx);
+
 	return retval;
 }
 
@@ -470,15 +470,12 @@ __inline int __cdecl cnd_wait(cnd_t *cond, mtx_t *mtx) {
 
 /* Precondition: 'ts' validated. */
 __inline int __cdecl __nocl_internal_time_timespec32_to_milliseconds(const struct __nocl_internal_time_timespec32 *ts, unsigned long *ms) {
-	unsigned long sec;
-	unsigned long nsec;
-
 	/* Overflow. */
 	if ((unsigned long) ts->tv_sec > (INFINITE - 1ul) / 1000ul) return 0;
 
-	sec = (unsigned long) ts->tv_sec * 1000ul;
+	unsigned long sec = (unsigned long) ts->tv_sec * 1000ul;
 	/* Add another millisecond if division yields remainder. */
-	nsec = (unsigned long) ts->tv_nsec / 1000000ul + !!((unsigned long) ts->tv_nsec % 1000000ul);
+	unsigned long nsec = (unsigned long) ts->tv_nsec / 1000000ul + !!((unsigned long) ts->tv_nsec % 1000000ul);
 
 	/* Overflow. */
 	if (nsec > INFINITE - 1ul - sec) return 0;
@@ -489,15 +486,12 @@ __inline int __cdecl __nocl_internal_time_timespec32_to_milliseconds(const struc
 
 /* Precondition: 'ts' validated. */
 __inline int __cdecl __nocl_internal_time_timespec64_to_milliseconds(const struct __nocl_internal_time_timespec64 *ts, unsigned long *ms) {
-	unsigned long sec;
-	unsigned long nsec;
-
 	/* Overflow. */
 	if ((unsigned __int64) ts->tv_sec > (INFINITE - 1ul) / 1000ul) return 0;
 
-	sec = (unsigned long) ts->tv_sec * 1000ul;
+	unsigned long sec = (unsigned long) ts->tv_sec * 1000ul;
 	/* Add another millisecond if division yields remainder. */
-	nsec = (unsigned long) ts->tv_nsec / 1000000ul + !!((unsigned long) ts->tv_nsec % 1000000ul);
+	unsigned long nsec = (unsigned long) ts->tv_nsec / 1000000ul + !!((unsigned long) ts->tv_nsec % 1000000ul);
 
 	/* Overflow. */
 	if (nsec > INFINITE - 1ul - sec) return 0;
@@ -563,7 +557,7 @@ __inline DWORD __cdecl __nocl_internal_threads_timepoint_to_millisecond_timespan
 }
 
 __inline int __cdecl __nocl_internal_threads_cnd_timedwait32(cnd_t *cond, mtx_t *mtx, const struct __nocl_internal_time_timespec32 *ts) {
-	if (!__NOCL_INTERNAL_THREADS_IS_TIMESPEC32_VALID(ts)) return thrd_error;
+	if (!__nocl_internal_threads_is_timespec32_valid(ts)) return thrd_error;
 
 	struct __nocl_internal_time_timespec32 current_time;
 
@@ -575,7 +569,7 @@ __inline int __cdecl __nocl_internal_threads_cnd_timedwait32(cnd_t *cond, mtx_t 
 }
 
 __inline int __cdecl __nocl_internal_threads_cnd_timedwait64(cnd_t *cond, mtx_t *mtx, const struct __nocl_internal_time_timespec64 *ts) {
-	if (!__NOCL_INTERNAL_THREADS_IS_TIMESPEC64_VALID(ts)) return thrd_error;
+	if (!__nocl_internal_threads_is_timespec64_valid(ts)) return thrd_error;
 
 	struct __nocl_internal_time_timespec64 current_time;
 
@@ -601,7 +595,7 @@ struct __nocl_internal_threads_tss_dtor_entry {
 };
 
 #if \
-	/* MSVC 8.0 */ (defined(_MSC_VER) && _MSC_VER >= 1400) || \
+	/* MSVC 7.0 */ (defined(_MSC_VER) && _MSC_VER >= 1300) || \
 	/* MinGW/MinGW-w64 GCC 3.2.0 */ defined(__MINGW32__)
 
 CRITICAL_SECTION __nocl_internal_threads_tss_dtor_list_critical_section;
@@ -635,7 +629,8 @@ __inline void __cdecl __nocl_internal_threads_ensure_tss_dtor_list_critical_sect
 	}
 }
 
-__declspec(noinline) VOID NTAPI __nocl_internal_threads_run_tss_dtors(PVOID pvDllHandle, DWORD dwReason, PVOID pvReserved) {
+noinline VOID NTAPI __nocl_internal_threads_run_tss_dtors(PVOID pvDllHandle, DWORD dwReason, PVOID pvReserved) {
+
 	(void) pvDllHandle;
 	(void) pvReserved;
 
@@ -664,6 +659,7 @@ __declspec(noinline) VOID NTAPI __nocl_internal_threads_run_tss_dtors(PVOID pvDl
 
 		LeaveCriticalSection(&__nocl_internal_threads_tss_dtor_list_critical_section);
 	}
+
 }
 
 #if defined(_MSC_VER)
@@ -807,6 +803,8 @@ __inline void __cdecl call_once(once_flag *flag, void (*func) (void)) {
 
 #endif
 
+#endif
+
 #elif \
 	/* GCC 3.3.0 */ (defined(__GNUC__) && (__GNUC__ >= 4 || (defined(__GNUC_MINOR__) && __GNUC__ == 3 && __GNUC_MINOR__ >= 3))) \
 	/* POSIX.1-2001 */ ((defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L) || \
@@ -815,6 +813,12 @@ __inline void __cdecl call_once(once_flag *flag, void (*func) (void)) {
 #include "time.h"
 #include "errno.h"
 
+#if defined(NOCL_FEATURE_NO_TIME) || defined(NOCL_FEATURE_NO_ERRNO)
+
+#define NOCL_FEATURE_NO_THREADS
+
+#else
+
 #include <pthread.h>
 #include <sched.h>
 
@@ -822,9 +826,9 @@ typedef int (*thrd_start_t) (void *);
 typedef void (*tss_dtor_t) (void *);
 
 enum {
-	mtx_plain	   = 0,
+	mtx_plain      = 0,
 	mtx_recursive  = 1,
-	mtx_timed	   = 2
+	mtx_timed      = 2
 };
 
 enum {
@@ -1021,6 +1025,8 @@ __inline__ void *tss_get(tss_t key) {
 __inline__ void call_once(once_flag *flag, void (*func) (void)) {
 	pthread_once(flag, func);
 }
+
+#endif
 
 #else
 

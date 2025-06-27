@@ -328,28 +328,26 @@ extern "C" {
 
 #define imaxabs  _abs64
 
-typedef struct __imaxdiv_t {
+typedef struct imaxdiv_t {
    intmax_t quot;
    intmax_t rem;
 } imaxdiv_t;
 
-__inline imaxdiv_t __cdecl __nocl_internal_imaxdiv(intmax_t numer, intmax_t denom) {
+__inline imaxdiv_t __cdecl imaxdiv(intmax_t numer, intmax_t denom) {
 
-   imaxdiv_t result;
+   imaxdiv_t res;
 
-   result.quot = numer / denom;
-   result.rem = numer % denom;
+   res.quot = numer / denom;
+   res.rem = numer % denom;
 
-   if (numer < 0 && result.rem > 0) {
+   if (numer < 0 && res.rem > 0) {
       // did division wrong; must fix up
-      ++ result.quot;
-      result.rem -= denom;
+      ++ res.quot;
+      res.rem -= denom;
    }
 
-   return result;
+   return res;
 }
-
-#define imaxdiv  __nocl_internal_imaxdiv
 
 #define strtoimax  _strtoi64
 #define strtoumax  _strtoui64

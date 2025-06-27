@@ -38,12 +38,32 @@ extern "C" {
 #endif
 
 #if defined(NOCL_HAS_COMPLEX_H) || \
-    /* C99 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+    /* C99 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) && !defined(__STDC_NO_COMPLEX__) || \
     /* C++11 */ (defined(__cplusplus) && __cplusplus >= 201103L) || \
     /* MSVC 14.0 */ (defined(_MSC_VER) && _MSC_VER >= 1900) || \
     /* GCC 3.0.0 */ (defined(__GNUC__) && __GNUC__ >= 3)
 
+#if defined(_MSC_VER)
+
+#if /* MSVC C11 */ defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+
 #include <complex.h>
+
+#define complex _Complex
+
+#else
+
+#define NOCL_FEATURE_NO_COMPLEX
+
+#endif
+
+#else
+
+#include <complex.h>
+
+#define complex _Complex
+
+#endif
 
 #else
 

@@ -28,8 +28,8 @@
  *
  */
 
-#if !defined(_NOCL_STDNORETURN_H)
-#define _NOCL_STDNORETURN_H
+#if !defined(_NOCL_ASSUME_H)
+#define _NOCL_ASSUME_H
 
 #if defined(__cplusplus)
 
@@ -37,31 +37,21 @@ extern "C" {
 
 #endif
 
-#if defined(NOCL_HAS_STDNORETURN_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-    /* GCC 4.7.0 */ (defined(__GNUC__) && (__GNUC__ >= 5 || (defined(__GNUC_MINOR__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+#if /* C++23 */ defined(__cplusplus) && __cplusplus >= 202302L
 
-#include <stdnoreturn.h>
+#define assume(expr)  [[assume((expr))]]
 
-#elif /* C++11 */ defined(__cplusplus) && __cplusplus >= 201103L
+#elif /* MSVC 7.0 */ defined(_MSC_VER) && _MSC_VER >= 1300
 
-#define _Noreturn  [[noreturn]]
-#define noreturn   _Noreturn
+#define assume  __assume
 
-#elif /* MSVC 7.1 */ defined(_MSC_VER) && _MSC_VER >= 1310
+#elif /* GCC 13.0 */ defined(__GNUC__) && (__GNUC__ >= 13)
 
-#define _Noreturn  __declspec(noreturn)
-#define noreturn   _Noreturn
-
-#elif /* GCC 2.5.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-
-#define _Noreturn  __attribute__((__noreturn__))
-#define noreturn   _Noreturn
+#define assume(expr)  __attribute__((assume(expr)))
 
 #else
 
-#define _Noreturn
-#define noreturn  _Noreturn
+#define assume(expr)
 
 #endif
 

@@ -45,16 +45,31 @@ extern "C" {
 
 #include <stdbool.h>
 
+#if /* C++98 */ defined(__cplusplus) || \
+    /* C23 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)
+
+#define _Bool  bool
+
+#endif
+
 #elif defined(_MSC_VER) || defined(__MINGW32__)
 
 #if !defined(__cplusplus)
 
-#include <windef.h>
+#if !defined(WIN32_LEAN_AND_MEAN)
 
-#define true   TRUE
+#define WIN32_LEAN_AND_MEAN
+
+#endif
+
+#include <windows.h>
+
 #define false  FALSE
+#define true   TRUE
 
 typedef BOOL _Bool;
+
+#define bool  _Bool
 
 #endif
 
@@ -66,8 +81,8 @@ typedef BOOL _Bool;
 
 #if !defined(__cplusplus)
 
-#define true   1
 #define false  0
+#define true   (!(false))
 
 #if /* GCC 2.95.0 */ __GNUC__ < 2 || !defined(__GNUC_MINOR__) || __GNUC__ != 2 || __GNUC_MINOR__ < 95
 

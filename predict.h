@@ -28,8 +28,8 @@
  *
  */
 
-#if !defined(_NOCL_STDNORETURN_H)
-#define _NOCL_STDNORETURN_H
+#if !defined(_NOCL_PREDICT_H)
+#define _NOCL_PREDICT_H
 
 #if defined(__cplusplus)
 
@@ -37,33 +37,29 @@ extern "C" {
 
 #endif
 
-#if defined(NOCL_HAS_STDNORETURN_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-    /* GCC 4.7.0 */ (defined(__GNUC__) && (__GNUC__ >= 5 || (defined(__GNUC_MINOR__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+#if /* C++20 */ defined(__cplusplus) && __cplusplus >= 202002L
 
-#include <stdnoreturn.h>
+#define _Likely(expr) ( \
+    ([](bool b) { switch (b) { [[likely]] case true: return true; [[unlikely]] case false: return false; } }) \
+    (expr))
+#define _Unlikely(expr) ( \
+    ([](bool b) { switch (b) { [[unlikely]] case true: return true; [[likely]] case false: return false; } }) \
+    (expr))
 
-#elif /* C++11 */ defined(__cplusplus) && __cplusplus >= 201103L
+#elif /* GCC 3.0.0 */ defined(__GNUC__) && __GNUC__ >= 3
 
-#define _Noreturn  [[noreturn]]
-#define noreturn   _Noreturn
-
-#elif /* MSVC 7.1 */ defined(_MSC_VER) && _MSC_VER >= 1310
-
-#define _Noreturn  __declspec(noreturn)
-#define noreturn   _Noreturn
-
-#elif /* GCC 2.5.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-
-#define _Noreturn  __attribute__((__noreturn__))
-#define noreturn   _Noreturn
+#define _Likely(expr)    __builtin_expect(!!(expr), 1)
+#define _Unlikely(expr)  __builtin_expect(!!(expr), 0)
 
 #else
 
-#define _Noreturn
-#define noreturn  _Noreturn
+#define _Likely(expr)    (!!(expr))
+#define _Unlikely(expr)  (!!(expr))
 
 #endif
+
+#define likely    _Likely
+#define unlikely  _Unlikely
 
 #if defined(__cplusplus)
 

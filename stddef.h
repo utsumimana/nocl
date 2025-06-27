@@ -66,7 +66,11 @@ typedef void *nullptr_t;
 
 #endif
 
-#if /* MSVC 7.0 */ defined(_MSC_VER) && _MSC_VER >= 1300
+#if /* C++23 */ defined(__cplusplus) && __cplusplus >= 202302L
+
+#define unreachable()  [[assume(false)]]
+
+#elif /* MSVC 7.0 */ defined(_MSC_VER) && _MSC_VER >= 1300
 
 #define unreachable()  __assume(0)
 
@@ -76,7 +80,7 @@ typedef void *nullptr_t;
 
 #else
 
-#define NOCL_FEATURE_NO_UNREACHABLE
+#define unreachable()
 
 #endif
 

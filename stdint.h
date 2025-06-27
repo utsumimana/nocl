@@ -49,7 +49,7 @@ extern "C" {
 #elif /* MSVC 2.0 */ (defined(_MSC_VER) && _MSC_VER >= 900)
 
 #include "limits.h"
-#include "wchar.h"
+#include "wctype.h"
 
 #if defined(NOCL_FEATURE_NO_LIMITS) || defined(NOCL_FEATURE_NO_WCHAR)
 

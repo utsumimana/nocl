@@ -28,8 +28,8 @@
  *
  */
 
-#if !defined(_NOCL_STDNORETURN_H)
-#define _NOCL_STDNORETURN_H
+#if !defined(_NOCL_INLINE_H)
+#define _NOCL_INLINE_H
 
 #if defined(__cplusplus)
 
@@ -37,33 +37,58 @@ extern "C" {
 
 #endif
 
-#if defined(NOCL_HAS_STDNORETURN_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-    /* GCC 4.7.0 */ (defined(__GNUC__) && (__GNUC__ >= 5 || (defined(__GNUC_MINOR__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+#if /* C99 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+    /* C++98 */ defined(__cplusplus)
 
-#include <stdnoreturn.h>
-
-#elif /* C++11 */ defined(__cplusplus) && __cplusplus >= 201103L
-
-#define _Noreturn  [[noreturn]]
-#define noreturn   _Noreturn
-
-#elif /* MSVC 7.1 */ defined(_MSC_VER) && _MSC_VER >= 1310
-
-#define _Noreturn  __declspec(noreturn)
-#define noreturn   _Noreturn
-
-#elif /* GCC 2.5.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-
-#define _Noreturn  __attribute__((__noreturn__))
-#define noreturn   _Noreturn
+#define _Inline  inline
 
 #else
 
-#define _Noreturn
-#define noreturn  _Noreturn
+#if /* MSVC 4.0 */ defined(_MSC_VER) && _MSC_VER >= 1000
+
+#define _Inline  __inline
+
+#if /* MSVC 14.0 */ defined(_MSC_VER) && _MSC_VER < 1900
+
+#define inline  _Inline
 
 #endif
+
+#elif /* GCC 2.7.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 7))
+
+#define _Inline  __inline__
+
+#if /* MinGW/MinGW-w64 GCC 3.2.0 */ !defined(__MINGW32__)
+
+#define inline  _Inline
+
+#endif
+
+#elif /* C99 */ !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
+
+#define _Inline
+
+#define inline  _Inline
+
+#endif
+
+#endif
+
+#if /* MSVC 7.0 */ defined(_MSC_VER) && _MSC_VER >= 1200
+
+#define _Forceinline  __forceinline inline
+
+#elif /* GCC 4.0.0 */ defined(__GNUC__) && __GNUC__ >= 4
+
+#define _Forceinline  __attribute__((__always_inline__)) inline
+
+#else
+
+#define _Forceinline  inline
+
+#endif
+
+#define forceinline  _Forceinline
 
 #if defined(__cplusplus)
 

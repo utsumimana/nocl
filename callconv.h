@@ -28,8 +28,8 @@
  *
  */
 
-#if !defined(_NOCL_STDNORETURN_H)
-#define _NOCL_STDNORETURN_H
+#if !defined(_NOCL_CALLCONV_H)
+#define _NOCL_CALLCONV_H
 
 #if defined(__cplusplus)
 
@@ -37,33 +37,20 @@ extern "C" {
 
 #endif
 
-#if defined(NOCL_HAS_STDNORETURN_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-    /* GCC 4.7.0 */ (defined(__GNUC__) && (__GNUC__ >= 5 || (defined(__GNUC_MINOR__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+#if defined(_WIN32)
 
-#include <stdnoreturn.h>
-
-#elif /* C++11 */ defined(__cplusplus) && __cplusplus >= 201103L
-
-#define _Noreturn  [[noreturn]]
-#define noreturn   _Noreturn
-
-#elif /* MSVC 7.1 */ defined(_MSC_VER) && _MSC_VER >= 1310
-
-#define _Noreturn  __declspec(noreturn)
-#define noreturn   _Noreturn
-
-#elif /* GCC 2.5.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-
-#define _Noreturn  __attribute__((__noreturn__))
-#define noreturn   _Noreturn
+#define _Cdecl    __cdecl
+#define _Stdcall  __stdcall
 
 #else
 
-#define _Noreturn
-#define noreturn  _Noreturn
+#define _Cdecl
+#define _Stdcall
 
 #endif
+
+#define cdecl    _Cdecl
+#define stdcall  _Stdcall
 
 #if defined(__cplusplus)
 

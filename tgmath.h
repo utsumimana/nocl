@@ -42,7 +42,23 @@ extern "C" {
     /* C++11 */ (defined(__cplusplus) && __cplusplus >= 201103L) || \
     /* MSVC 14.0 */ (defined(_MSC_VER) && _MSC_VER >= 1900)
 
+#if defined(_MSC_VER)
+
+#if /* MSVC C11 */ defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+
 #include <tgmath.h>
+
+#else
+
+#define NOCL_FEATURE_NO_TGMATH
+
+#endif
+
+#else
+
+#include <tgmath.h>
+
+#endif
 
 #else
 

@@ -28,8 +28,8 @@
  *
  */
 
-#if !defined(_NOCL_STDNORETURN_H)
-#define _NOCL_STDNORETURN_H
+#if !defined(_NOCL_NODISCARD_H)
+#define _NOCL_NODISCARD_H
 
 #if defined(__cplusplus)
 
@@ -37,33 +37,26 @@ extern "C" {
 
 #endif
 
-#if defined(NOCL_HAS_STDNORETURN_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-    /* GCC 4.7.0 */ (defined(__GNUC__) && (__GNUC__ >= 5 || (defined(__GNUC_MINOR__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+#if /* C23 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) || \
+    /* C++17 */ defined(__cplusplus) && __cplusplus >= 201703L
 
-#include <stdnoreturn.h>
+#define _Nodiscard  [[nodiscard]]
 
-#elif /* C++11 */ defined(__cplusplus) && __cplusplus >= 201103L
+#elif /* GCC 3.4.0 */ defined(__GNUC__) && (__GNUC__ >= 4 || (defined(__GNUC_MINOR__) && __GNUC__ == 3 && __GNUC_MINOR__ >= 4))
 
-#define _Noreturn  [[noreturn]]
-#define noreturn   _Noreturn
+#define _Nodiscard  __attribute__((__warn_unused_result__))
 
-#elif /* MSVC 7.1 */ defined(_MSC_VER) && _MSC_VER >= 1310
+#elif /* SAL */ defined(_Check_return_)
 
-#define _Noreturn  __declspec(noreturn)
-#define noreturn   _Noreturn
-
-#elif /* GCC 2.5.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-
-#define _Noreturn  __attribute__((__noreturn__))
-#define noreturn   _Noreturn
+#define _Nodiscard  _Check_return_
 
 #else
 
-#define _Noreturn
-#define noreturn  _Noreturn
+#define _Nodiscard
 
 #endif
+
+#define nodiscard  _Nodiscard
 
 #if defined(__cplusplus)
 

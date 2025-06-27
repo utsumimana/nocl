@@ -28,8 +28,8 @@
  *
  */
 
-#if !defined(_NOCL_STDNORETURN_H)
-#define _NOCL_STDNORETURN_H
+#if !defined(_NOCL_RESTRICT_H)
+#define _NOCL_RESTRICT_H
 
 #if defined(__cplusplus)
 
@@ -37,31 +37,57 @@ extern "C" {
 
 #endif
 
-#if defined(NOCL_HAS_STDNORETURN_H) || \
-    /* C11 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) || \
-    /* GCC 4.7.0 */ (defined(__GNUC__) && (__GNUC__ >= 5 || (defined(__GNUC_MINOR__) && __GNUC__ == 4 && __GNUC_MINOR__ >= 7)))
+#if /* C99 */ (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 
-#include <stdnoreturn.h>
+#define _Restrict  restrict
 
-#elif /* C++11 */ defined(__cplusplus) && __cplusplus >= 201103L
+#elif defined(_MSC_VER)
 
-#define _Noreturn  [[noreturn]]
-#define noreturn   _Noreturn
+#if _MSC_VER >= 1928
 
-#elif /* MSVC 7.1 */ defined(_MSC_VER) && _MSC_VER >= 1310
-
-#define _Noreturn  __declspec(noreturn)
-#define noreturn   _Noreturn
-
-#elif /* GCC 2.5.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-
-#define _Noreturn  __attribute__((__noreturn__))
-#define noreturn   _Noreturn
+#define _Restrict  restrict
 
 #else
 
-#define _Noreturn
-#define noreturn  _Noreturn
+#if defined(__cplusplus)
+
+#if /* MSVC 14.0 */ _MSC_VER >= 1900
+
+#define _Restrict  __restrict
+
+#else
+
+#define _Restrict
+
+#endif
+
+#else
+
+#if /* MSVC 6.0 */ _MSC_VER >= 1200
+
+#define _Restrict  __restrict
+
+#else
+
+#define _Restrict
+
+#endif
+
+#endif
+
+#define restrict  _Restrict
+
+#endif
+
+#elif /* GCC 2.95.0 */ defined(__GNUC__) && (__GNUC__ >= 3 || (defined(__GNUC_MINOR__) && __GNUC__ == 2 && __GNUC_MINOR__ >= 95))
+
+#define _Restrict  __restrict__
+#define restrict  _Restrict
+
+#else
+
+#define _Restrict
+#define restrict  _Restrict
 
 #endif
 

@@ -59,11 +59,15 @@ extern "C" {
 
 #if /* Win32 */ defined(_WIN32) && \
 	/* MSVC 2.0 */ ((defined(_MSC_VER) && _MSC_VER >= 900) || \
-	defined(__MINGW32__))
+	/* MinGW/MinGW-w64 with GCC 3.2.0 */ defined(__MINGW32__))
 
-#include <windef.h>
-#include <profileapi.h>
-#include <sysinfoapi.h>
+#if !defined(WIN32_LEAN_AND_MEAN)
+
+#define WIN32_LEAN_AND_MEAN
+
+#endif
+
+#include <windows.h>
 
 struct __nocl_internal_time_timespec32 {
 	long tv_sec;
@@ -190,6 +194,14 @@ __inline__ int timespec_get(struct timespec *ts, int base) {
 
 #elif /* Win32 */ defined(_WIN32) && \
 	(defined(_MSC_VER) || defined(__MINGW32__))
+
+#if !defined(WIN32_LEAN_AND_MEAN)
+
+#define WIN32_LEAN_AND_MEAN
+
+#endif
+
+#include <windows.h>
 
 __inline int __cdecl timespec_getres(struct timespec *ts, int base) {
 	if (base == TIME_UTC) {
